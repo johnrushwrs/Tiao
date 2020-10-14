@@ -3,6 +3,7 @@
 import Vector from "../Utilities/VectorUtilsModule.js";
 import ScoreBoardView from "./ScoreBoardView.js";
 import GameEntityViewFactory from "./GameEntityViewFactory.js";
+import BackgroundView from "./BackgroundView.js";
 
 class GameView
 {
@@ -11,6 +12,7 @@ class GameView
         this.DrawController = new HTMLCanvasController(canvas, new Vector(0, canvas.height/2.0));
         this.GameStateModel = gameState;
         this.ScoreBoardView = new ScoreBoardView();
+        this.BackgroundView = new BackgroundView();
     }
 
     create_game_entity_views(entityModels)
@@ -24,8 +26,10 @@ class GameView
 
     draw_background()
     {
-        this.DrawController.draw_line(new Vector(this.DrawController.origin.x, 0),
-                                      new Vector(this.DrawController.origin.x + this.DrawController.width, 0));
+        // this.DrawController.draw_line(new Vector(this.DrawController.origin.x, 0),
+        //                               new Vector(this.DrawController.origin.x + this.DrawController.width, 0));
+        // this.DrawController.draw();
+        this.BackgroundView.render(this.DrawController);
         this.DrawController.draw();
     }
 
@@ -147,7 +151,7 @@ class HTMLCanvasController
         var width = top_right_pos.x - bot_left_pos.x;
         var height = top_right_pos.y - bot_left_pos.y;
 
-        this.canvasContext.rect(bot_left_pos.x, bot_left_pos.y, width, -height);
+        this.canvasContext.rect(bot_left_pos.x, bot_left_pos.y, width, height);
     }
 
     fill_rect(bot_left_pos, top_right_pos)
@@ -160,7 +164,7 @@ class HTMLCanvasController
         var width = top_right_pos.x - bot_left_pos.x;
         var height = top_right_pos.y - bot_left_pos.y;
 
-        this.canvasContext.fillRect(bot_left_pos.x, bot_left_pos.y, width, -height);
+        this.canvasContext.fillRect(bot_left_pos.x, bot_left_pos.y, width, height);
     }
 
     fill()

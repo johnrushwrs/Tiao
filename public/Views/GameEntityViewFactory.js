@@ -13,6 +13,8 @@ class GameEntityViewFactory
                 return new PlayerEntityView(gameEntityModel);
             case 'GameEntity':
                 return new GameEntityView(gameEntityModel);
+            case 'ShapedGameEntity':
+                return new GameEntityView(gameEntityModel);
             default:
                 console.log("Unknown entity model type");
                 return null;

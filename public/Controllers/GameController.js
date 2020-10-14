@@ -18,6 +18,8 @@ class GameController
             this.gameUIController.spacePressed = true;
             event.preventDefault();
         }
+
+        this.gameUIController.handle_key_press(event.keyCode, event.type === "keydown");
     }
 
     render(time_delta)
@@ -41,7 +43,8 @@ canvas.height = windowHeight;
 var gameController = new GameController(canvas);
 
 var keypressFunction = gameController.handle_keypress.bind(gameController);
-window.addEventListener("keypress", keypressFunction, false);
+window.addEventListener("keydown", keypressFunction, false);
+window.addEventListener("keyup", keypressFunction, false);
 
 // create the game loop
-setInterval(gameController.render.bind(gameController), 10, 1);
+setInterval(gameController.render.bind(gameController), 16, 1);

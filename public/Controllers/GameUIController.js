@@ -6,36 +6,36 @@ import GameView from "../Views/GameView.js";
 import { TriangleEnemy, Player, GameEntity } from "../Models/GameEntityModel.js";
 import GameStateModel from "../Models/GameStateModel.js";
 import Polygon from "../Utilities/Shapes.js";
+import { ProbabilityBasedLevelController } from "./LevelControllers.js";
+import KeybindController from "./KeybindController.js";
+import PlayerController from "./PlayerController.js";
 
 class GameUIController
 {
     constructor(canvas)
     {
         this.level = 0;
-        this.spacePressed = false;
         this.gamePaused = false;
         
         this.player = new Player();
         this.playerOffset = canvas.width * .03;
-        this.reset_player();
         
-        var enemyEntityModels = [];
-        for (var i = 0; i < 10; i++)
-        {
-            enemyEntityModels.push(new TriangleEnemy(new Vector(canvas.width * (i + 1), 0)));
-        }
-        
-        this.PlayerEntityModels = [this.player];
-        this.GameEntityModels = this.PlayerEntityModels.concat(enemyEntityModels);
-        
+        this.GameEntityModels = [this.player];
         this.GameState = new GameStateModel();
         
-        this.GameOrigin = new Vector(0, 0);
+        this.CameraEntity = new GameEntity();
+        this.CameraEntity.SetPosition(new Vector(0, 0));
+        this.CameraEntity.SetVelocity(new Vector(9, 0));
+
+        this.GameOrigin = this.CameraEntity.Position;
         this.GameView = new GameView(canvas, this.GameState);
-        this.update_gameView_shape();
+        this.LevelGenerator = new ProbabilityBasedLevelController(.01, 150);
+        this.KeybindController = new KeybindController();
+        this.PlayerController = new PlayerController(this.player, this.playerOffset);
+        this.update_game_view();
     }
 
-    update_gameView_shape()
+    update_game_view()
     {
         var width = this.GameView.DrawController.width;
         var height = this.GameView.DrawController.height;
@@ -51,7 +51,7 @@ class GameUIController
         this.GameViewShape = new Polygon(vertices);
     }
 
-    remove_gameEntities(entityIndexesToRemove)
+    remove_game_entities(entityIndexesToRemove)
     {
         entityIndexesToRemove.forEach(entityIndex => 
         {
@@ -72,10 +72,21 @@ class GameUIController
         this.GameEntityModels = newGameEntities;
     }
 
-    reset_player()
+    generate_new_entities()
     {
-        this.player.SetPosition(new Vector(this.playerOffset, -this.player.Shape.radius * 2 / Math.sqrt(2)));
-        this.player.SetVelocity(new Vector(9, 0));
+        var canvasWidth = this.GameView.DrawController.width;
+        var newEntityPosition = new Vector(canvasWidth + this.GameOrigin.x, 0);
+        if (this.LevelGenerator.ShouldGenerateNewEntity(this.GameState, newEntityPosition))
+        {
+            if (this.LevelGenerator.LastGeneratedEntity != null)
+            {
+                console.log("Previous entity was at position: " + this.LevelGenerator.LastGeneratedEntity.Position.x + "," + this.LevelGenerator.LastGeneratedEntity.Position.y)
+            }
+            
+            var newEntity = this.LevelGenerator.GenerateNewEntity(this.GameState, newEntityPosition);
+            console.log("Generated a new entity at position: " + newEntity.Position.x + "," + newEntity.Position.y);
+            this.GameEntityModels.push(newEntity);
+        }
     }
 
     check_collisions()
@@ -87,8 +98,7 @@ class GameUIController
             {
                 if (CollisionCalculator.IsColliding(entity.Shape, this.player.Shape))
                 {
-                    this.reset_player();
-                    this.GameState.Score = 0;
+                    this.reset_game();
                 }
             }
         }
@@ -112,22 +122,27 @@ class GameUIController
         return entity_indexes_offscreen;
     }
 
-    handle_keyPress(event)
+    handle_key_press(keyCode, isKeyDown)
     {
-        console.log("hello!");
-        if (event.keyCode == 32)
-        {
-            this.spacePressed = true;
-            event.preventDefault();
-        }
+        var playerAction = this.KeybindController.get_action(keyCode);
+        console.log("This player action was pressed! : " + playerAction);
+        this.PlayerController.handle_player_action(playerAction, isKeyDown);
     }
 
-    update_gameEntity_Vectors(time_delta)
+    apply_player_inputs()
+    {
+        var appliedVelocity = this.PlayerController.get_applied_velocities();
+
+        var newXVel = this.PlayerController.BaseVelocity.x + appliedVelocity.x;
+        var yVel = this.player.Velocity.y;
+        this.player.SetVelocity(new Vector(newXVel, yVel));
+    }
+
+    update_game_entities(time_delta)
     {
         var grav_accel = new Vector(0, 9.8);
 
-        var i;
-        for (i = 0; i < this.GameEntityModels.length; i++)
+        for (var i = 0; i < this.GameEntityModels.length; i++)
         {
             var entity = this.GameEntityModels[i];
             var curr_pos = entity.Position;
@@ -149,6 +164,12 @@ class GameUIController
         }
     }
 
+    update_camera_position(time_delta)
+    {
+        var distance_travelled = this.CameraEntity.Velocity.Multiply(new Vector(time_delta, time_delta));
+        this.CameraEntity.SetPosition(this.CameraEntity.Position.Add(distance_travelled));
+    }
+
     // this method is used by the parent view
     step_game(time_delta)
     {
@@ -167,30 +188,35 @@ class GameUIController
             }
         }, this);
 
-        this.remove_gameEntities(entitiesToRemove);
+        this.remove_game_entities(entitiesToRemove);
 
-        // apply input to player objects
-        if (this.spacePressed == true)
-        {
-            this.player.SetVelocity(this.player.Velocity.Add(new Vector(0, -80)));
-            this.spacePressed = false;
-        }
+        // check if we should generate a new entity
+        this.generate_new_entities();
 
-        this.update_gameEntity_Vectors(time_delta);
+        // update game entities
+        this.apply_player_inputs();
+        this.update_game_entities(time_delta);
+        this.update_camera_position(time_delta);
         
-        // things to consider here:
-        // How can we pass the current updated values to the gameview? if they are the same reference, does that work?
-        // Is it bad practice to create the view over and over again? seems bad.
-        // Maybe we should pass the models in the render function?
-        this.GameOrigin = new Vector(this.player.Position.x - this.playerOffset, 0);
+        // update origin and render
+        this.GameOrigin = this.CameraEntity.Position;
         this.GameView.render(this.GameOrigin, this.GameEntityModels);
-        this.update_gameView_shape();
+        
+        // update the camera view
+        this.update_game_view();
+        this.GameState.Timestamp += time_delta;
     }
 
     // this method is used by the parent view
     reset_game()
     {
-        this.reset_player();
+        this.PlayerController.reset_player();
+        this.GameState.Score = 0;
+        this.LevelGenerator.LastGeneratedEntity = null;
+        this.GameEntityModels = [this.player];
+        this.CameraEntity.SetPosition(new Vector(0, 0));
+
+        console.log("************************GAME RESET************************");
     }
 };
 

@@ -6,6 +6,7 @@ class GameStateModel
     {
         this.Score = 0;
         this.Level = 1;
+        this.Timestamp = 0;
     }
 }
 
