@@ -4,6 +4,8 @@ import Vector from "../Utilities/VectorUtilsModule.js";
 import CollisionCalculator from "../Utilities/Collisions.js";
 import GameView from "../Views/GameView.js";
 import { TriangleEnemy, Player, GameEntity } from "../Models/GameEntityModel.js";
+import GameStateModel from "../Models/GameStateModel.js";
+import Polygon from "../Utilities/Shapes.js";
 
 class GameUIController
 {
@@ -17,15 +19,57 @@ class GameUIController
         this.playerOffset = canvas.width * .03;
         this.reset_player();
         
-        this.EnemyEntityModels = [];
+        var enemyEntityModels = [];
         for (var i = 0; i < 10; i++)
         {
-            this.EnemyEntityModels.push(new TriangleEnemy(new Vector(canvas.width * (i + 1), 0)));
+            enemyEntityModels.push(new TriangleEnemy(new Vector(canvas.width * (i + 1), 0)));
         }
         
         this.PlayerEntityModels = [this.player];
-        this.GameEntityModels = this.PlayerEntityModels.concat(this.EnemyEntityModels);
-        this.GameView = new GameView(canvas, this.GameEntityModels, new Vector(0, 0));
+        this.GameEntityModels = this.PlayerEntityModels.concat(enemyEntityModels);
+        
+        this.GameState = new GameStateModel();
+        
+        this.GameOrigin = new Vector(0, 0);
+        this.GameView = new GameView(canvas, this.GameState);
+        this.update_gameView_shape();
+    }
+
+    update_gameView_shape()
+    {
+        var width = this.GameView.DrawController.width;
+        var height = this.GameView.DrawController.height;
+        var gameOriginXOffset = this.GameOrigin.x;
+        var vertices = 
+        [
+            new Vector(width + gameOriginXOffset, -height/2), 
+            new Vector(gameOriginXOffset, -height/2), 
+            new Vector(gameOriginXOffset, height/2), 
+            new Vector(width + gameOriginXOffset, height/2)
+        ];
+
+        this.GameViewShape = new Polygon(vertices);
+    }
+
+    remove_gameEntities(entityIndexesToRemove)
+    {
+        entityIndexesToRemove.forEach(entityIndex => 
+        {
+            delete this.GameEntityModels[entityIndex];
+        });
+
+        var newGameEntities = [];
+        for (var i = 0; i < this.GameEntityModels.length; i++)
+        {
+            if (this.GameEntityModels[i] === undefined)
+            {
+                continue;
+            }
+
+            newGameEntities.push(this.GameEntityModels[i]);
+        }
+
+        this.GameEntityModels = newGameEntities;
     }
 
     reset_player()
@@ -36,15 +80,36 @@ class GameUIController
 
     check_collisions()
     {
-        for (var i = 0; i < this.EnemyEntityModels.length; i++)
+        for (var i = 0; i < this.GameEntityModels.length; i++)
         {
-            var enemyEntity = this.EnemyEntityModels[i];
-            if (CollisionCalculator.IsColliding(enemyEntity.Shape, this.player.Shape))
+            var entity = this.GameEntityModels[i];
+            if (entity.TypeName != "Player")
             {
-                alert("You died.");
-                this.reset_player();
+                if (CollisionCalculator.IsColliding(entity.Shape, this.player.Shape))
+                {
+                    this.reset_player();
+                    this.GameState.Score = 0;
+                }
             }
         }
+    }
+
+    get_offscreen_entities()
+    {
+        var entity_indexes_offscreen = []
+        for (var i = 0; i < this.GameEntityModels.length; i++)
+        {
+            var entity = this.GameEntityModels[i];
+            if (entity.TypeName != "Player")
+            {
+                if (!CollisionCalculator.IsColliding(entity.Shape, this.GameViewShape))
+                {
+                    entity_indexes_offscreen.push(i);
+                }
+            }
+        }
+
+        return entity_indexes_offscreen;
     }
 
     handle_keyPress(event)
@@ -90,6 +155,20 @@ class GameUIController
         // check for collisions
         this.check_collisions();
 
+        // remove entities that are offscreen and increment score
+        var offScreenEntityIndexes = this.get_offscreen_entities();
+        var entitiesToRemove = [];
+        offScreenEntityIndexes.forEach(entityIndex => {
+            let entity = this.GameEntityModels[entityIndex];
+            if (entity.Position.x < this.player.Position.x)
+            {
+                this.GameState.Score += 20;
+                entitiesToRemove.push(entityIndex);
+            }
+        }, this);
+
+        this.remove_gameEntities(entitiesToRemove);
+
         // apply input to player objects
         if (this.spacePressed == true)
         {
@@ -103,7 +182,9 @@ class GameUIController
         // How can we pass the current updated values to the gameview? if they are the same reference, does that work?
         // Is it bad practice to create the view over and over again? seems bad.
         // Maybe we should pass the models in the render function?
-        this.GameView.render(new Vector(this.player.Position.x - this.playerOffset, 0));
+        this.GameOrigin = new Vector(this.player.Position.x - this.playerOffset, 0);
+        this.GameView.render(this.GameOrigin, this.GameEntityModels);
+        this.update_gameView_shape();
     }
 
     // this method is used by the parent view

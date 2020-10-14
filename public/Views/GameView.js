@@ -1,15 +1,20 @@
 'use strict';
 
 import Vector from "../Utilities/VectorUtilsModule.js";
+import ScoreBoardView from "./ScoreBoardView.js";
 import GameEntityViewFactory from "./GameEntityViewFactory.js";
 
 class GameView
 {
-    constructor(canvas, entityModels)
+    constructor(canvas, gameState)
     {
         this.DrawController = new HTMLCanvasController(canvas, new Vector(0, canvas.height/2.0));
-        this.GameEntityModels = entityModels;
+        this.GameStateModel = gameState;
+        this.ScoreBoardView = new ScoreBoardView();
+    }
 
+    create_game_entity_views(entityModels)
+    {
         this.GameEntityViews = [];
         for (var i = 0; i < entityModels.length; i++)
         {
@@ -30,8 +35,9 @@ class GameView
         this.DrawController.draw();
     }
 
-    draw_game_entities()
+    draw_game_entities(entityModels)
     {
+        this.create_game_entity_views(entityModels);
         for (var i = 0; i < this.GameEntityViews.length; i++)
         {
             var entityView = this.GameEntityViews[i];
@@ -40,12 +46,18 @@ class GameView
         this.DrawController.draw();
     }
 
-    render(player_position)
+    draw_scoreboard()
+    {
+        this.ScoreBoardView.render(this.DrawController, this.GameStateModel.Score);
+    }
+
+    render(player_position, entityModels)
     {
         this.DrawController.clear_canvas();
         this.DrawController.set_origin(player_position);
         this.draw_background();
-        this.draw_game_entities();
+        this.draw_game_entities(entityModels);
+        this.draw_scoreboard();
     }
 };
 
@@ -78,6 +90,16 @@ class HTMLCanvasController
     set_origin(new_origin_pos)
     {
         this.origin = new_origin_pos;
+    }
+
+    set_font(newFont)
+    {
+        this.canvasContext.font = newFont;
+    }
+
+    fill_text(text, start_pos)
+    {
+        this.canvasContext.fillText(text, start_pos.x, start_pos.y);
     }
 
     draw_line(start_pos, end_pos)
