@@ -1,42 +1,7 @@
 'use strict';
 
-function Vector(x, y)
-{
-    this.x = x;
-    this.y = y;
-};
-Vector.prototype.Subtract = function (vector2)
-{
-    var output = new Vector(0, 0);
-    output.x = this.x - vector2.x;
-    output.y = this.y - vector2.y;
-
-    return output;
-};
-Vector.prototype.Add = function (vector2)
-{
-    var output = new Vector(0, 0);
-    output.x = this.x + vector2.x;
-    output.y = this.y + vector2.y;
-
-    return output;
-};
-Vector.prototype.Multiply = function (vector2)
-{
-    var output = new Vector(0, 0);
-    output.x = this.x * vector2.x;
-    output.y = this.y * vector2.y;
-
-    return output;
-};
-Vector.prototype.Squared = function ()
-{
-    var output = new Vector(0, 0);
-    output.x = this.x * this.x;
-    output.y = this.y * this.y;
-
-    return output;
-};
+import Vector from "./VectorUtilsModule.js";
+import CollisionCalculator from "./Collisions.js";
 
 function GameEntity()
 {
