@@ -60,7 +60,6 @@ class PlayerController
     reset_player()
     {
         this.PlayerModel.SetPosition(new Vector(this.PlayerOffset, -this.PlayerModel.Shape.radius * 2 / Math.sqrt(2)));
-        this.PlayerModel.SetVelocity(new Vector(9, 0));
 
         this.IsMovingLeft = false;
         this.IsMovingRight = false;

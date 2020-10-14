@@ -25,7 +25,7 @@ class GameUIController
         
         this.CameraEntity = new GameEntity();
         this.CameraEntity.SetPosition(new Vector(0, 0));
-        this.CameraEntity.SetVelocity(new Vector(9, 0));
+        this.CameraEntity.SetVelocity(new Vector(0, 0));
 
         this.GameOrigin = this.CameraEntity.Position;
         this.GameView = new GameView(canvas, this.GameState);
@@ -133,7 +133,7 @@ class GameUIController
     {
         var appliedVelocity = this.PlayerController.get_applied_velocities();
 
-        var newXVel = this.PlayerController.BaseVelocity.x + appliedVelocity.x;
+        var newXVel = appliedVelocity.x;
         var yVel = this.player.Velocity.y;
         this.player.SetVelocity(new Vector(newXVel, yVel));
     }
