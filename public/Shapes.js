@@ -16,7 +16,7 @@ class Polygon extends Shape
     {
         var vertices = [];
 
-        let vertexAngle = 180 - (360/numSides);
+        let vertexAngle = (360/numSides);
         let vertexAngleRadians = (vertexAngle/360) * 2 * Math.PI;
 
         // calculate the vertices
@@ -49,23 +49,17 @@ class Polygon extends Shape
 
             // get the vector between the second and first, i.e. the side
             var directionVector = secondVertex.Subtract(firstVertex);
-
-            // normalize the direction
-            var normalizedDirection = directionVector.Normalized();
             
             // rotate the direction so it is normal to the midpoint vector
-            var rotatedDirection = normalizedDirection.Rotate(-Math.PI / 2);
+            var rotatedDirection = directionVector.Rotate(-Math.PI / 2);
 
-            // this normalized vector is the vector normal to the side formed between 
-            // the first and second vertex
             normals.push(rotatedDirection);
         }
 
         super(normals, vertices);
+        this.numSides = numSides;
+        this.radius = radiusLength;
     }
 }
-
-var testPoly = new Polygon(new Vector(0, 0), 4, 10);
-console.log(testPoly);
 
 export default Polygon;

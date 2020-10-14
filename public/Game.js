@@ -2,15 +2,22 @@
 
 import Vector from "./VectorUtilsModule.js";
 import CollisionCalculator from "./Collisions.js";
+import Polygon from "./Shapes.js";
 
 function GameEntity()
 {
     this.Position = new Vector(0, 0);
     this.Velocity = new Vector(0, 0);
+    this.Shape = new Polygon(this.Position, 4, 10, Math.PI/4);
+};
+GameEntity.prototype.SetShape = function ()
+{
+    this.Shape = new Polygon(this.Position, 4, 10, Math.PI/4);
 };
 GameEntity.prototype.SetPosition = function (position_vector)
 {
     this.Position = position_vector;
+    this.SetShape();
 };
 GameEntity.prototype.SetVelocity = function (velocity_vector)
 {
@@ -18,7 +25,7 @@ GameEntity.prototype.SetVelocity = function (velocity_vector)
 };
 GameEntity.prototype.Draw = function (draw_controller)
 {
-    draw_controller.fillRect(this.Position.x, this.Position.y, 100, 100);
+    draw_controller.draw_polygon(this.Shape);
 };
 
 Player.prototype = new GameEntity;
@@ -26,11 +33,17 @@ function Player()
 {
     // make a delegate draw function here that we can pass to the draw controller 
     // rather than having it be elsewhere. With this pattern we can change the player drawing 
-    // 
+};
+Player.prototype.SetShape = function ()
+{
+    var playerRadius = 50;
+    var shapeOrigin = this.Position.Add(new Vector(playerRadius * Math.cos(Math.PI/4), -playerRadius * Math.sin(Math.PI/4)));
+    this.Shape = new Polygon(shapeOrigin, 4, playerRadius, Math.PI/4);
 };
 Player.prototype.Draw = function (draw_controller)
 {
-    draw_controller.fill_rect(this.Position, new Vector(this.Position.x + 100, this.Position.y + 100));
+    draw_controller.draw_polygon(this.Shape);
+    draw_controller.fill();
 };
 
 TriangleEnemy.prototype = new GameEntity;
@@ -38,12 +51,16 @@ function TriangleEnemy(position_vector)
 {
     this.Position = position_vector;
 };
+TriangleEnemy.prototype.SetShape = function ()
+{
+    var radius = 50;
+    var shapeOrigin = this.Position.Add(new Vector(radius * Math.cos(Math.PI/6), -radius * Math.sin(Math.PI/6)));
+    shapeOrigin = this.Position.Add(new Vector(0, -radius/2));
+    this.Shape = new Polygon(shapeOrigin, 3, radius, Math.PI/6);
+};
 TriangleEnemy.prototype.Draw = function (draw_controller)
 {
-    var triangle_top_vertex = new Vector(this.Position.x + 50, this.Position.y - 100);
-    var triangle_right_vertex = new Vector(this.Position.x + 100, this.Position.y);
-
-    draw_controller.draw_line_multi(this.Position, triangle_top_vertex, triangle_right_vertex, this.Position);
+    draw_controller.draw_polygon(this.Shape);
     draw_controller.fill();
 }
 
@@ -105,6 +122,14 @@ class HTMLCanvasController
         this);
     }
 
+    draw_polygon(polygon)
+    {
+        var positions = polygon.vertices.slice(1, polygon.vertices.length);
+        positions.push(polygon.vertices[0]);
+
+        this.draw_line_multi(polygon.vertices[0], ...positions);
+    }
+
     draw_rect(bot_left_pos, top_right_pos)
     {
         bot_left_pos = this.translate_to_canvas_space(bot_left_pos);
@@ -156,8 +181,7 @@ class GameController
         this.player = new Player();
 
         this.playerOffset = this.DrawController.width * .03;
-        this.player.SetPosition(new Vector(this.playerOffset, 0));
-        this.player.SetVelocity(new Vector(9, 0));
+        this.reset_player();
 
         this.EnemyEntities = [];
         for (var i = 0; i < 10; i++)
@@ -171,6 +195,12 @@ class GameController
         this.level = 0;
     }
 
+    reset_player()
+    {
+        this.player.SetPosition(new Vector(this.playerOffset, -this.player.Shape.radius * 2 / Math.sqrt(2)));
+        this.player.SetVelocity(new Vector(9, 0));
+    }
+
     draw_background()
     {
         this.DrawController.draw_line(new Vector(this.DrawController.origin.x, 0),
@@ -180,22 +210,31 @@ class GameController
 
     draw_player()
     {
-        //this.DrawController.fill_rect(this.player.Position, new Vector(this.player.Position.x + 100, this.player.Position.y + 100));
-        
         this.player.Draw(this.DrawController);
         this.DrawController.draw();
     }
 
     draw_enemies()
     {
-        var i;
-        for (i = 0; i < this.EnemyEntities.length; i++)
+        for (var i = 0; i < this.EnemyEntities.length; i++)
         {
             var enemyEntity = this.EnemyEntities[i];
             enemyEntity.Draw(this.DrawController);
-            //this.DrawController.fill_rect(enemyEntity.Position, new Vector(enemyEntity.Position.x + 100, enemyEntity.Position.y + 100));
         }
         this.DrawController.draw();
+    }
+
+    check_collisions()
+    {
+        for (var i = 0; i < this.EnemyEntities.length; i++)
+        {
+            var enemyEntity = this.EnemyEntities[i];
+            if (CollisionCalculator.IsColliding(enemyEntity.Shape, this.player.Shape))
+            {
+                alert("You died.");
+                this.reset_player();
+            }
+        }
     }
 
     handle_keyPress(event)
@@ -238,11 +277,13 @@ class GameController
     step_game(time_delta)
     {
         // play one step of the game
-        console.log(this);
 
         // clear the screen before we start
         this.DrawController.clear_canvas();
         this.DrawController.set_origin(new Vector(this.player.Position.x - this.playerOffset, 0));
+
+        // check for collisions
+        this.check_collisions();
 
         // draw the background
         this.draw_background();
@@ -261,11 +302,6 @@ class GameController
 
         // draw any objects
         this.draw_enemies();
-
-        // check input 
-
-        
-        // check for game ending scenario
     }
 };
 

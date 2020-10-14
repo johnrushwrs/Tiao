@@ -19,10 +19,15 @@ class CollisionCalculator
             var shape1MinMaxProjections = this.GetMinMaxProjections(shape1Vertices, norm);
             var shape2MinMaxProjections = this.GetMinMaxProjections(shape2Vertices, norm);
 
-            if (shape1MinMaxProjections[0] > shape2MinMaxProjections[1]
-                || shape1MinMaxProjections[1] > shape2MinMaxProjections[0])
+            var shape1Min = shape1MinMaxProjections[0];
+            var shape2Min = shape2MinMaxProjections[0];
+
+            var shape1Max = shape1MinMaxProjections[1];
+            var shape2Max = shape2MinMaxProjections[1];
+
+            if (shape2Max < shape1Min || shape1Max < shape2Min)
             {
-                return true;
+                return false;
             }
         }
 
@@ -32,14 +37,19 @@ class CollisionCalculator
             var shape1MinMaxProjections = this.GetMinMaxProjections(shape1Vertices, norm);
             var shape2MinMaxProjections = this.GetMinMaxProjections(shape2Vertices, norm);
 
-            if (shape1MinMaxProjections[0] > shape2MinMaxProjections[1]
-                || shape1MinMaxProjections[1] > shape2MinMaxProjections[0])
+            var shape1Min = shape1MinMaxProjections[0];
+            var shape2Min = shape2MinMaxProjections[0];
+
+            var shape1Max = shape1MinMaxProjections[1];
+            var shape2Max = shape2MinMaxProjections[1];
+
+            if (shape2Max < shape1Min || shape1Max < shape2Min)
             {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     static GetMinMaxProjections(verts, projectingAxis)
@@ -68,11 +78,5 @@ class CollisionCalculator
         return [minProjectionValue, maxProjectionValue];
     }
 }
-
-var squarePoly = new Polygon(new Vector(0, 0), 4, 5, Math.PI / 4);
-var squarePoly2 = new Polygon(new Vector(0, 0), 4, 10, Math.PI / 4);
-
-var collides = CollisionCalculator.IsColliding(squarePoly, squarePoly2);
-var collidesReverse = CollisionCalculator.IsColliding(squarePoly2, squarePoly);
 
 export default CollisionCalculator;
