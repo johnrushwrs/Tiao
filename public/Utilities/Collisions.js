@@ -1,7 +1,6 @@
 // ref: https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
 
-import Vector from "./VectorUtilsModule.js";
-import Polygon from "./Shapes.js";
+'use strict';
 
 class CollisionCalculator
 {
