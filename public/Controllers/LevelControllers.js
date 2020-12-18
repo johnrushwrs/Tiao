@@ -71,7 +71,7 @@ class ProbabilityBasedLevelController extends LevelController
     GenerateNewEntity(gameState, position)
     {
         this.LastGeneratedEntity = new TriangleEnemy(position);
-        this.LastGeneratedEntity.SetVelocity(new Vector(-9, 0));
+        this.LastGeneratedEntity.AddForce(new Vector(-10, 0));
 
         return this.LastGeneratedEntity;
     }

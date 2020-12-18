@@ -37,7 +37,7 @@ class Polygon extends Shape
             // rotate the direction so it is normal to the midpoint vector
             var rotatedDirection = directionVector.Rotate(-Math.PI / 2);
 
-            normals.push(rotatedDirection);
+            normals.push(rotatedDirection.ClipValues());
         }
 
         super(normals, vertices);

@@ -81,11 +81,32 @@ Vector.prototype.Rotate = function (rotationRadians)
     }
 
     var length = this.Length();
-    var rotatedX = Math.sqrt(length) * Math.cos(alpha + rotationRadians);
-    var rotatedY = Math.sqrt(length) * Math.sin(alpha + rotationRadians);
+    var rotatedX = length * Math.cos(alpha + rotationRadians);
+    var rotatedY = length * Math.sin(alpha + rotationRadians);
 
     return new Vector(rotatedX, rotatedY);
 };
+Vector.prototype.Clone = function ()
+{
+    return new Vector(this.x, this.y);  
+};
+Vector.prototype.ClipValues = function (clip_threshold = .00001)
+{
+    var vector = new Vector(this.x, this.y);
+    if ((this.x > 0 && this.x < clip_threshold)
+        || (this.x < 0 && this.x > -clip_threshold))
+    {
+        vector.x = 0;
+    }
+
+    if ((this.y > 0 && this.y < clip_threshold)
+        || (this.y < 0 && this.y > -clip_threshold))
+    {
+        vector.y = 0;
+    }
+
+    return vector;
+}
 
 Vector.Distance = function (vector1, vector2)
 {

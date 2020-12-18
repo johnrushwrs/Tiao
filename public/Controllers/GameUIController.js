@@ -3,12 +3,13 @@
 import Vector from "../Utilities/VectorUtilsModule.js";
 import CollisionCalculator from "../Utilities/Collisions.js";
 import GameView from "../Views/GameView.js";
-import { TriangleEnemy, Player, GameEntity } from "../Models/GameEntityModel.js";
+import { TriangleEnemy, Player, GameEntity, ShapedGameEntity } from "../Models/GameEntityModel.js";
 import GameStateModel from "../Models/GameStateModel.js";
 import Polygon from "../Utilities/Shapes.js";
 import { ProbabilityBasedLevelController } from "./LevelControllers.js";
 import KeybindController from "./KeybindController.js";
 import PlayerController from "./PlayerController.js";
+import PhysicsEngine from "../PhysicsEngine/PhysicsEngine.js";
 
 class GameUIController
 {
@@ -17,21 +18,28 @@ class GameUIController
         this.level = 0;
         this.gamePaused = false;
         
-        this.player = new Player();
-        this.playerOffset = canvas.width * .03;
-        
-        this.GameEntityModels = [this.player];
         this.GameState = new GameStateModel();
-        
+    
         this.CameraEntity = new GameEntity();
         this.CameraEntity.SetPosition(new Vector(0, 0));
         this.CameraEntity.SetVelocity(new Vector(0, 0));
-
+        
         this.GameOrigin = this.CameraEntity.Position;
         this.GameView = new GameView(canvas, this.GameState);
         this.LevelGenerator = new ProbabilityBasedLevelController(.01, 150);
         this.KeybindController = new KeybindController();
+        this.PhysicsEngine = new PhysicsEngine([this.get_world_forces()]);
+        
+        this.player = new Player();
+        this.playerOffset = canvas.width * .03;
         this.PlayerController = new PlayerController(this.player, this.playerOffset);
+
+        this.FloorEntity = new ShapedGameEntity();
+        this.FloorEntity.Shape = this.get_floor_shape();
+        this.FloorEntity.IsMovable = false;
+        this.FloorEntity.IsEnemy = false;
+
+        this.GameEntityModels = [this.player, this.FloorEntity];
         this.update_game_view();
     }
 
@@ -42,13 +50,30 @@ class GameUIController
         var gameOriginXOffset = this.GameOrigin.x;
         var vertices = 
         [
-            new Vector(width + gameOriginXOffset, -height/2), 
-            new Vector(gameOriginXOffset, -height/2), 
-            new Vector(gameOriginXOffset, height/2), 
-            new Vector(width + gameOriginXOffset, height/2)
+            new Vector(width + gameOriginXOffset, -height/2), // top right
+            new Vector(gameOriginXOffset, -height/2), // top left
+            new Vector(gameOriginXOffset, height/2), // bot left
+            new Vector(width + gameOriginXOffset, height/2) // bot right
         ];
 
         this.GameViewShape = new Polygon(vertices);
+    }
+
+    get_floor_shape()
+    {
+        var width = this.GameView.DrawController.width;
+        var height = this.GameView.DrawController.height;
+        var gameOriginXOffset = this.GameOrigin.x;
+        var vertices = 
+        [
+            new Vector(gameOriginXOffset, 0),  // top left
+            new Vector(width * 2 + gameOriginXOffset, 0),  // top right 
+            new Vector(width * 2 + gameOriginXOffset, height/2), // bot right
+            new Vector(gameOriginXOffset, height/2), // bot left
+        ];
+
+        var floorShape = new Polygon(vertices);
+        return floorShape;
     }
 
     remove_game_entities(entityIndexesToRemove)
@@ -94,7 +119,7 @@ class GameUIController
         for (var i = 0; i < this.GameEntityModels.length; i++)
         {
             var entity = this.GameEntityModels[i];
-            if (entity.TypeName != "Player")
+            if (entity.TypeName != "Player" && entity.IsEnemy)
             {
                 if (CollisionCalculator.IsColliding(entity.Shape, this.player.Shape))
                 {
@@ -138,29 +163,49 @@ class GameUIController
         this.player.SetVelocity(new Vector(newXVel, yVel));
     }
 
+    set_player_applied_forces()
+    {
+        var appliedForces = this.PlayerController.get_applied_forces();
+
+        this.player.ResetForces();
+        this.player.AddForce(appliedForces);
+    }
+
+    get_world_forces()
+    {
+        return new Vector(0, 9.8); // only gravity
+    }
+
     update_game_entities(time_delta)
     {
-        var grav_accel = new Vector(0, 9.8);
+        var grav_accel = this.get_world_forces();
 
-        for (var i = 0; i < this.GameEntityModels.length; i++)
+        if (false)
         {
-            var entity = this.GameEntityModels[i];
-            var curr_pos = entity.Position;
+            for (var i = 0; i < this.GameEntityModels.length; i++)
+            {
+                var entity = this.GameEntityModels[i];
+                var curr_pos = entity.Position;
 
-            var time_delta_squared = time_delta * time_delta;
-            var accel_calc = grav_accel.Multiply(new Vector(.5 * time_delta_squared, .5 * time_delta_squared));
-            var vel_calc = entity.Velocity.Multiply(new Vector(time_delta, time_delta));
-            
-            var new_pos = accel_calc.Add(vel_calc).Add(curr_pos);
-            new_pos.y = Math.min(new_pos.y, 0); // we use min because positive is towards the ground
+                var time_delta_squared = time_delta * time_delta;
+                var accel_calc = grav_accel.Multiply(new Vector(.5 * time_delta_squared, .5 * time_delta_squared));
+                var vel_calc = entity.Velocity.Multiply(new Vector(time_delta, time_delta));
+                
+                var new_pos = accel_calc.Add(vel_calc).Add(curr_pos);
+                new_pos.y = Math.min(new_pos.y, 0); // we use min because positive is towards the ground
 
-            entity.SetPosition(new_pos);
+                entity.SetPosition(new_pos);
 
-            accel_calc = grav_accel.Multiply(new Vector(time_delta, time_delta));
-            var new_vel = accel_calc.Add(entity.Velocity);
-            new_vel.y = Math.min(new_vel.y, 0);
+                accel_calc = grav_accel.Multiply(new Vector(time_delta, time_delta));
+                var new_vel = accel_calc.Add(entity.Velocity);
+                new_vel.y = Math.min(new_vel.y, 0);
 
-            entity.SetVelocity(new_vel);
+                entity.SetVelocity(new_vel);
+            }
+        }
+        else
+        {
+            this.PhysicsEngine.update_game_entities(this.GameEntityModels, time_delta);
         }
     }
 
@@ -194,7 +239,7 @@ class GameUIController
         this.generate_new_entities();
 
         // update game entities
-        this.apply_player_inputs();
+        this.set_player_applied_forces();
         this.update_game_entities(time_delta);
         this.update_camera_position(time_delta);
         
@@ -213,7 +258,7 @@ class GameUIController
         this.PlayerController.reset_player();
         this.GameState.Score = 0;
         this.LevelGenerator.LastGeneratedEntity = null;
-        this.GameEntityModels = [this.player];
+        this.GameEntityModels = [this.player, this.FloorEntity];
         this.CameraEntity.SetPosition(new Vector(0, 0));
 
         console.log("************************GAME RESET************************");

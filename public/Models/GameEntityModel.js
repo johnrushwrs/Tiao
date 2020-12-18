@@ -7,6 +7,10 @@ function GameEntity()
 {
     this.Position = new Vector(0, 0);
     this.Velocity = new Vector(0, 0);
+    this.Mass = 1;
+    this.AppliedForces = new Vector(0, 0);
+    this.IsMovable = true;
+    this.IsEnemy = true;
 };
 GameEntity.prototype.SetPosition = function (position_vector)
 {
@@ -15,6 +19,14 @@ GameEntity.prototype.SetPosition = function (position_vector)
 GameEntity.prototype.SetVelocity = function (velocity_vector)
 {
     this.Velocity = velocity_vector;
+};
+GameEntity.prototype.AddForce = function (force_vector)
+{
+    this.AppliedForces = this.AppliedForces.Add(force_vector);
+};
+GameEntity.prototype.ResetForces = function ()
+{
+    this.AppliedForces = new Vector(0, 0);
 };
 
 ShapedGameEntity.prototype = new GameEntity;
@@ -37,6 +49,7 @@ Player.prototype = new ShapedGameEntity;
 function Player()
 {
     this.TypeName = "Player";
+    this.IsEnemy = false;
 };
 Player.prototype.SetShape = function ()
 {
@@ -50,6 +63,7 @@ function TriangleEnemy(position_vector)
 {
     this.Position = position_vector;
     this.SetShape();
+    this.IsEnemy = true;
 };
 TriangleEnemy.prototype.SetShape = function ()
 {

@@ -57,9 +57,26 @@ class PlayerController
         return totalApplied;
     }
 
+    get_applied_forces()
+    {
+        var totalApplied = new Vector(0, 0);        
+        if (this.IsMovingLeft)
+        {
+            totalApplied = totalApplied.Add(new Vector(PlayerSpeedValues[PlayerAction.MOVE_LEFT], 0));
+        }
+
+        if (this.IsMovingRight)
+        {
+            totalApplied = totalApplied.Add(new Vector(PlayerSpeedValues[PlayerAction.MOVE_RIGHT], 0));
+        }
+
+        return totalApplied;
+    }
+
     reset_player()
     {
-        this.PlayerModel.SetPosition(new Vector(this.PlayerOffset, -this.PlayerModel.Shape.radius * 2 / Math.sqrt(2)));
+        //this.PlayerModel.SetPosition(new Vector(this.PlayerOffset, -this.PlayerModel.Shape.radius * 2 / Math.sqrt(2)));
+        this.PlayerModel.SetPosition(new Vector(this.PlayerOffset, -100));
 
         this.IsMovingLeft = false;
         this.IsMovingRight = false;
